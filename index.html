@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เครื่องคำนวณ 60/40 พลัส (เวอร์ชันสลับฝั่ง)</title>
+    <!-- ใช้ Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Kanit', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-900 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white shadow-2xl rounded-2xl p-6 max-w-md w-full border border-slate-100">
+        <!-- หัวข้อ -->
+        <div class="text-center mb-6">
+            <h1 class="text-2xl font-bold text-blue-600 mb-1">สิทธิ์ 60/40 พลัส</h1>
+            <p class="text-xs text-slate-400">รัฐช่วย 60% | เราจ่าย 40%</p>
+        </div>
+
+        <!-- ปุ่มสลับโหมด (Tabs) -->
+        <div class="flex bg-slate-100 p-1 rounded-xl mb-6">
+            <button id="tabPriceBtn" onclick="switchTab('price')" class="w-1/2 py-2 text-sm font-semibold rounded-lg bg-white text-blue-600 shadow-sm transition-all cursor-pointer">
+                🛒 คิดจากราคาสินค้า
+            </button>
+            <button id="tabBalanceBtn" onclick="switchTab('balance')" class="w-1/2 py-2 text-sm font-semibold rounded-lg text-slate-500 hover:text-slate-700 transition-all cursor-pointer">
+                ⚖️ เช็กยอดคงเหลือ
+            </button>
+        </div>
+
+        <!-- ================= โหมด 1: คำนวณจากราคาสินค้า ================= -->
+        <div id="tabPrice" class="space-y-4">
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">💰 ใส่ราคาสินค้าทั้งหมด (บาท)</label>
+                <input type="number" id="totalPrice" oninput="calculatePriceSplit()" placeholder="เช่น 100, 300, 500" 
+                    class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg font-medium bg-slate-50">
+            </div>
+
+            <div class="space-y-3 pt-2">
+                <div class="flex justify-between items-center bg-blue-50 p-4 rounded-xl border border-blue-100">
+                    <span class="text-slate-700 font-medium">🏛️ รัฐช่วยจ่ายให้ (60%)</span>
+                    <span id="govtShare" class="text-xl font-bold text-blue-600">0.00 บาท</span>
+                </div>
+                <div class="flex justify-between items-center bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                    <span class="text-slate-700 font-medium">📱 เราต้องจ่ายเอง (40%)</span>
+                    <span id="userShare" class="text-xl font-bold text-emerald-600">0.00 บาท</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= โหมด 2: คำนวณจากยอดคงเหลือ (อัปเดตสลับฝั่งแล้ว) ================= -->
+        <div id="tabBalance" class="space-y-4 hidden">
+            <!-- ย้ายรัฐบาลมาไว้ด้านบน -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">🏛️ หากสิทธิ์ฝั่งรัฐเหลือ (บาท)</label>
+                <input type="number" id="govtRemaining" oninput="calculateFromGovtRemaining()" placeholder="ลองใส่ 300" 
+                    class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg font-medium bg-slate-50">
+            </div>
+
+            <div class="flex justify-center my-2 text-slate-300">⬇️ หรือจะกรอกฝั่งเราก็ได้ ⬇️</div>
+
+            <!-- ย้ายฝั่งเรามาไว้ด้านล่าง -->
+            <div>
+                <label class="block text-sm font-semibold text-slate-700 mb-2">📱 หากยอดเงินฝั่งเราเหลือ (บาท)</label>
+                <input type="number" id="userRemaining" oninput="calculateFromUserRemaining()" placeholder="ลองใส่ 200" 
+                    class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-lg font-medium bg-slate-50">
+            </div>
+
+            <hr class="border-slate-100 my-4">
+
+            <!-- สรุปวงเงินช้อปปิ้งที่เหลือ -->
+            <div class="bg-amber-50 p-4 rounded-xl border border-amber-100 text-center">
+                <p class="text-xs text-amber-700 font-medium mb-1">🛒 คุณจะเหลือวงเงินสำหรับซื้อของได้อีกทั้งหมด</p>
+                <span id="totalRemaining" class="text-2xl font-bold text-amber-600">0.00 บาท</span>
+            </div>
+        </div>
+
+        <!-- หมายเหตุ -->
+        <div class="mt-6 text-2xs text-slate-400 bg-slate-50 p-3 rounded-lg text-center border border-slate-100">
+            *ระบบคิดตามเกณฑ์สัดส่วนรัฐ 60% และประชาชน 40% (จำกัดสิทธิ์รัฐไม่เกิน 200 บ./วัน)
+        </div>
+    </div>
+
+    <!-- ส่วนควบคุมลอจิกเบื้องหลัง -->
+    <script>
+        function switchTab(mode) {
+            const tabPrice = document.getElementById('tabPrice');
+            const tabBalance = document.getElementById('tabBalance');
+            const btnPrice = document.getElementById('tabPriceBtn');
+            const btnBalance = document.getElementById('tabBalanceBtn');
+
+            if (mode === 'price') {
+                tabPrice.classList.remove('hidden');
+                tabBalance.classList.add('hidden');
+                btnPrice.className = "w-1/2 py-2 text-sm font-semibold rounded-lg bg-white text-blue-600 shadow-sm transition-all cursor-pointer";
+                btnBalance.className = "w-1/2 py-2 text-sm font-semibold rounded-lg text-slate-500 hover:text-slate-700 transition-all cursor-pointer";
+            } else {
+                tabPrice.classList.add('hidden');
+                tabBalance.classList.remove('hidden');
+                btnPrice.className = "w-1/2 py-2 text-sm font-semibold rounded-lg text-slate-500 hover:text-slate-700 transition-all cursor-pointer";
+                btnBalance.className = "w-1/2 py-2 text-sm font-semibold rounded-lg bg-white text-blue-600 shadow-sm transition-all cursor-pointer";
+            }
+        }
+
+        function calculatePriceSplit() {
+            const totalPrice = parseFloat(document.getElementById('totalPrice').value) || 0;
+            let govtShare = 0;
+            let userShare = 0;
+
+            if (totalPrice > 0) {
+                let calculatedGovt = totalPrice * 0.6;
+                if (calculatedGovt > 200) {
+                    govtShare = 200;
+                    userShare = totalPrice - 200;
+                } else {
+                    govtShare = calculatedGovt;
+                    userShare = totalPrice * 0.4;
+                }
+            }
+            document.getElementById('govtShare').innerText = govtShare.toFixed(2) + " บาท";
+            document.getElementById('userShare').innerText = userShare.toFixed(2) + " บาท";
+        }
+
+        // คำนวณจากยอดคงเหลือฝั่ง "ผู้ใช้"
+        function calculateFromUserRemaining() {
+            const userRem = parseFloat(document.getElementById('userRemaining').value) || 0;
+            if (userRem > 0) {
+                const govtRem = userRem * 1.5;
+                const totalRem = userRem + govtRem;
+
+                document.getElementById('govtRemaining').value = govtRem.toFixed(2);
+                document.getElementById('totalRemaining').innerText = totalRem.toFixed(2) + " บาท";
+            } else {
+                document.getElementById('govtRemaining').value = "";
+                document.getElementById('totalRemaining').innerText = "0.00 บาท";
+            }
+        }
+
+        // คำนวณจากยอดคงเหลือฝั่ง "รัฐบาล"
+        function calculateFromGovtRemaining() {
+            const govtRem = parseFloat(document.getElementById('govtRemaining').value) || 0;
+            if (govtRem > 0) {
+                const userRem = govtRem / 1.5;
+                const totalRem = userRem + govtRem;
+
+                document.getElementById('userRemaining').value = userRem.toFixed(2);
+                document.getElementById('totalRemaining').innerText = totalRem.toFixed(2) + " บาท";
+            } else {
+                document.getElementById('userRemaining').value = "";
+                document.getElementById('totalRemaining').innerText = "0.00 บาท";
+            }
+        }
+    </script>
+</body>
+</html>
